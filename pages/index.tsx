@@ -212,6 +212,7 @@ const Index: React.FC<indexProps> = ({}) => {
                <button
                  className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                  type="button"
+                 //@ts-ignore
                  onClick={(e) => handleSubmit(e)}
                >
                  Hack In !
@@ -239,6 +240,7 @@ const Index: React.FC<indexProps> = ({}) => {
                 {confirmed?.state && !confirmed?.matched &&
                 <div className="w-full px-3 mt-24 mb-28 text-center">
                   <image
+                  //@ts-ignore
                    src="https://media.makeameme.org/created/you-stupid-donkey-6e2d2233c6.jpg"
                     className="w-full h-full p-4"
                     alt="Wrong"
