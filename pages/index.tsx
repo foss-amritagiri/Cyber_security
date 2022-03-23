@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout/Layout'
 
-import { doc, setDoc,addDoc,collection } from "firebase/firestore"; 
+import { doc, setDoc,addDoc,collection,increment,onSnapshot,updateDoc } from "firebase/firestore"; 
 import { db } from '../components/API/Config';
 import Image from 'next/image'
 interface indexProps {
@@ -24,14 +24,24 @@ const Index: React.FC<indexProps> = ({}) => {
    matched: false,
    state:false
  })
+ const [seats, setSeats] = useState(0)
   useEffect(() => {
     // call the codeGenerate only once
     codeGenerate()
+    CurrentCount()
     return () => {
      codeGenerate()
     }
   }, [])
-  
+  const CurrentCount = () => {
+    const unsub = onSnapshot(doc(db,"count","no"),(doc:any) => {
+      let data = doc.data()
+      setSeats(parseInt(data?.no))
+    })
+    return () => {
+      unsub()
+    }
+  }
   const AddData = async() => {
    
     try{
@@ -39,7 +49,12 @@ const Index: React.FC<indexProps> = ({}) => {
       //write data to firestore
      
       const docRef = await addDoc(collection(db, "users"), form);
-      
+      const docRef2 = doc(db,"count","no");
+      await updateDoc(docRef2,{no:increment(1)})
+      setConfirmed({
+        matched: true,
+        state: true
+      })
     
 
     } catch(error){
@@ -53,9 +68,10 @@ const Index: React.FC<indexProps> = ({}) => {
     //slice the last 4 digits
     let tempCode = Math.floor(Math.random() * 9000) + 1000
     setCode(tempCode)
-     await console.log("Secret Key:",tempCode)
-     //console log the code in font size of 20 px with a color of blue and a font family of monospace
-      // await console.log(`%c ${tempCode}`, `font-size: 20px; color: blue; font-family: monospace;`)
+    // store the code in the cookie
+    document.cookie = `code=${tempCode}`
+    
+    await localStorage.setItem("Key", tempCode.toString());
    
   }
 
@@ -65,10 +81,7 @@ const Index: React.FC<indexProps> = ({}) => {
     //get the value of the input
    
     if(parseInt(form?.code) === code){
-      setConfirmed({
-        matched: true,
-        state: true
-      })
+    
     
       
       await AddData()
@@ -88,6 +101,24 @@ const Index: React.FC<indexProps> = ({}) => {
       setState(1)
     }
   }
+
+  const RegOver = () => (
+    <>
+    <div className="flex justify-center mt-12 mb-12">
+    <img src="https://thumbs.gfycat.com/NimbleComfortableFruitfly-size_restricted.gif" className="w-full h-full" />
+    </div>
+
+  <div>
+    <h1 className="text-2xl font-bold text-center text-[#822699]">
+      Sorry ! Registration Over !
+    </h1>
+    <p className="text-center mt-4">
+        Thanks for your interest in Amrita Cyber Security Club.
+    </p>
+  </div>
+  </>
+  )
+ 
     return (
       <>
         
@@ -97,12 +128,20 @@ const Index: React.FC<indexProps> = ({}) => {
             <div className="bg-white h-full shadow-md rounded w-full px-8 pt-6 pb-8 mb-4  justify-center align-center">
               <div className="flex justify-center">
                 <h1 className="text-2xl font-bold text-center text-[#822699]">
-                  Amrita Cyber Security Club Registration
+                  Amrita Cyber Security Club 
                 </h1>
-                
+                <br/>
                
                 </div>
-                {state === 0 ? 
+                <div>
+                <h2 className="text-xl mt-4 font-bold text-center text-[#822699]">
+                  Registration Form
+                </h2>
+                <p className='text-sm mt-4 text-right font-sans'>Seats Left: {50 - seats} </p>
+                </div>
+                {seats >= 50 ? RegOver() :
+
+                state === 0 ? 
           <>
                 <form>
                   <div className="mt-4 mb-6">
@@ -174,11 +213,12 @@ const Index: React.FC<indexProps> = ({}) => {
                         Email
                       </label>
                       <input
-                        className="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+                        className="appearance-none block text-sm w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
                         value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
                         id="email"
                         type="email"
+                        required
                         placeholder="50c13ty@protonmail.com"
                       />
                     </div>
@@ -192,7 +232,10 @@ const Index: React.FC<indexProps> = ({}) => {
                 >
                   Submit
                 </button>
+                
                 </div>
+                <p className='text-sm mt-4 text-right font-sans'>*Limited Seats (FCFS)</p>
+               
                 </form>
                 </>
             : <>
@@ -213,7 +256,7 @@ const Index: React.FC<indexProps> = ({}) => {
                       />
                      
                       <p className="text-xs text-gray-700">
-                      Hint: Check browser console for secret code
+                      Hint: Check browser cookie/local storage for secret code
                       </p>
                     </div>
                     <div className="flex justify-center mt-10">
@@ -247,14 +290,15 @@ const Index: React.FC<indexProps> = ({}) => {
               </>
               }
                 {confirmed?.state && !confirmed?.matched &&
-                <div className="w-full px-3 mt-24 mb-28 text-center">
-                  <image
-                  //@ts-ignore
-                   src="https://media.makeameme.org/created/you-stupid-donkey-6e2d2233c6.jpg"
-                    className="w-full h-full p-4"
-                    alt="Wrong"
-                  />
-                  <h1 className="text-center text-gray-700 text-xl font-bold">
+                <div className="w-full px-3 py-12 text-center">
+                  
+                 <img 
+                  className="w-full h-full"
+                  src="https://i.pinimg.com/originals/70/ce/41/70ce41310f8a9c2a84e97b57198015d9.gif"
+                  alt='Wrong'
+                  /> 
+
+                  <h1 className="text-center text-gray-700 mt-4 mb-2 text-xl font-bold">
                     Wrong Code
                   </h1>
                   <button
